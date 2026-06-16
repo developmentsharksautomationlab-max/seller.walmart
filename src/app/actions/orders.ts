@@ -180,8 +180,13 @@ export async function generateOrders(
   // Parse as LOCAL midnight so the dates line up with the dashboard's
   // local-time month buckets (no UTC drift across month boundaries).
   const dayMs = 86_400_000;
+  const nowMs = Date.now();
   const fromMs = new Date(`${from}T00:00:00`).getTime();
-  const spanMs = Math.max(1, new Date(`${to}T00:00:00`).getTime() + dayMs - fromMs);
+  // Never stamp an order in the future. The dashboard's current period ends at
+  // "now", so a future-dated order would fall outside the window and the KPIs
+  // would come up short of the exact GMV / Units / Orders targets entered here.
+  const upperMs = Math.min(new Date(`${to}T00:00:00`).getTime() + dayMs, nowMs);
+  const spanMs = Math.max(1, upperMs - fromMs);
 
   const data = Array.from({ length: orders }, (_, i) => {
     const product = pick(PRODUCT_POOL);
@@ -208,7 +213,14 @@ export async function generateOrders(
   });
 
   try {
-    await prisma.order.createMany({ data });
+    // Reset first: wipe this user's existing orders so the dashboard KPIs reflect
+    // ONLY the freshly generated set, instead of stacking on top of old values.
+    // Both steps run in one transaction so a failure never leaves the dashboard
+    // empty.
+    await prisma.$transaction([
+      prisma.order.deleteMany({ where: { userId } }),
+      prisma.order.createMany({ data }),
+    ]);
   } catch (err) {
     console.error("[generateOrders] failed:", err);
     return { error: "Could not generate orders. Please try again." };
@@ -217,7 +229,7 @@ export async function generateOrders(
   revalidatePath("/orders");
   revalidatePath("/"); // dashboard KPIs depend on orders
 
-  return { ok: "Orders added to your dashboard." };
+  return { ok: "Dashboard reset — your generated orders are ready." };
 }
 
 export async function updateOrderStatus(formData: FormData): Promise<void> {

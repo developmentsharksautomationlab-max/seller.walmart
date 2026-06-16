@@ -249,8 +249,10 @@ export default function DateRangePicker({
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-2 rounded-full border border-wm-blue/40 px-3.5 py-2 text-sm transition-colors hover:bg-wm-blue/5"
+        disabled
+        aria-disabled="true"
+        title="Comparison is turned off for now"
+        className="inline-flex cursor-not-allowed items-center gap-2 rounded-full border border-slate-200 px-3.5 py-2 text-sm opacity-60"
       >
         <Calendar className="h-4 w-4 shrink-0 text-wm-blue" />
         <span className="text-left">
