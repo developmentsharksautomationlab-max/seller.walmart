@@ -5,11 +5,17 @@ import { cookies } from "next/headers";
 const SESSION_COOKIE = "session";
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
-const secretKey = process.env.SESSION_SECRET;
-if (!secretKey) {
-  throw new Error("SESSION_SECRET is not set. Add it to your .env file.");
+// Read the secret lazily (at call time) rather than at module-evaluation time.
+// Throwing at the top level breaks Next.js build-time config collection when the
+// env var isn't present in the build environment; deferring it keeps the error
+// where it belongs — the moment we actually need to sign/verify a session.
+function getEncodedKey(): Uint8Array {
+  const secretKey = process.env.SESSION_SECRET;
+  if (!secretKey) {
+    throw new Error("SESSION_SECRET is not set. Add it to your .env file.");
+  }
+  return new TextEncoder().encode(secretKey);
 }
-const encodedKey = new TextEncoder().encode(secretKey);
 
 export type SessionPayload = {
   userId: string;
@@ -21,7 +27,7 @@ export async function encrypt(payload: SessionPayload): Promise<string> {
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime("7d")
-    .sign(encodedKey);
+    .sign(getEncodedKey());
 }
 
 export async function decrypt(
@@ -29,7 +35,7 @@ export async function decrypt(
 ): Promise<SessionPayload | null> {
   if (!session) return null;
   try {
-    const { payload } = await jwtVerify(session, encodedKey, {
+    const { payload } = await jwtVerify(session, getEncodedKey(), {
       algorithms: ["HS256"],
     });
     return payload as unknown as SessionPayload;
