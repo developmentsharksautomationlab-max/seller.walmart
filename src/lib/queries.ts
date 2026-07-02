@@ -55,14 +55,11 @@ export type DashboardData = {
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
 }
-// Comparison is presentation-only for now (the compare/date picker is disabled).
-// After a "generate from targets" reset the real prior period is near-empty,
-// which produced absurd deltas like "+8465% from $123". Instead each KPI shows a
-// believable, stable growth of 40–50%, seeded by the current value so it holds
-// across refreshes and only re-rolls when the underlying data changes.
-function growthFor(value: number, key: MetricKey): number {
-  const seed = Math.round(value * 100) + key.length * 7;
-  return 0.4 + Math.abs(Math.sin(seed)) * 0.1;
+// % change vs the comparison period. Null when the prior is zero — a delta off
+// an empty prior period reads as an absurd "+8465%", so we show "0%" instead.
+function pctChange(cur: number, prior: number): number | null {
+  if (prior <= 0) return null;
+  return round1(((cur - prior) / prior) * 100);
 }
 
 type Sale = { amount: number; quantity: number };
@@ -94,27 +91,17 @@ export async function getDashboardData(
 
   const sales = orders.filter(notCanceled);
   const cur = sales.filter((o) => inRange(o.createdAt, current.start, current.end));
+  const cmp = sales.filter((o) => inRange(o.createdAt, compare.start, compare.end));
 
   const curGmv = metricOf(cur, "gmv");
   const curUnits = metricOf(cur, "units");
   const curOrders = cur.length;
   const curAur = metricOf(cur, "aur");
 
-  // Stable 40–50% growth for GMV / Units / Orders (see growthFor). priorValue is
-  // back-derived from it so "<change>% increase from <priorValue>" stays
-  // internally consistent.
-  const growth: Record<"gmv" | "units" | "orders", number> = {
-    gmv: growthFor(curGmv, "gmv"),
-    units: growthFor(curUnits, "units"),
-    orders: growthFor(curOrders, "orders"),
-  };
-  const priorGmv = curGmv / (1 + growth.gmv);
-  const priorUnits = curUnits / (1 + growth.units);
-  const priorOrders = curOrders / (1 + growth.orders);
-  // AUR is kept normal: its prior follows from the GMV/Units priors (AUR =
-  // GMV ÷ Units), so the change lands in a realistic few-percent range instead
-  // of an inflated 40–50%.
-  const priorAur = priorUnits > 0 ? priorGmv / priorUnits : 0;
+  const priorGmv = metricOf(cmp, "gmv");
+  const priorUnits = metricOf(cmp, "units");
+  const priorOrders = cmp.length;
+  const priorAur = metricOf(cmp, "aur");
 
   const kpis: Kpi[] = [
     {
@@ -122,31 +109,28 @@ export async function getDashboardData(
       label: "GMV",
       value: currency0.format(curGmv),
       priorValue: currency0.format(priorGmv),
-      change: curGmv > 0 ? round1(growth.gmv * 100) : null,
+      change: pctChange(curGmv, priorGmv),
     },
     {
       key: "units",
       label: "Units Sold",
       value: curUnits.toLocaleString(),
-      priorValue: Math.round(priorUnits).toLocaleString(),
-      change: curUnits > 0 ? round1(growth.units * 100) : null,
+      priorValue: priorUnits.toLocaleString(),
+      change: pctChange(curUnits, priorUnits),
     },
     {
       key: "orders",
       label: "Orders",
       value: curOrders.toLocaleString(),
-      priorValue: Math.round(priorOrders).toLocaleString(),
-      change: curOrders > 0 ? round1(growth.orders * 100) : null,
+      priorValue: priorOrders.toLocaleString(),
+      change: pctChange(curOrders, priorOrders),
     },
     {
       key: "aur",
       label: "AUR",
       value: currency2.format(curAur),
       priorValue: currency2.format(priorAur),
-      change:
-        curAur > 0 && priorAur > 0
-          ? round1(((curAur - priorAur) / priorAur) * 100)
-          : null,
+      change: pctChange(curAur, priorAur),
     },
   ];
 
@@ -167,20 +151,22 @@ export async function getDashboardData(
     const bStart = new Date(current.start.getTime() + i * bucketMs);
     const bEnd = new Date(Math.min(bStart.getTime() + bucketMs, current.end.getTime()));
     const curBucket = sales.filter((o) => o.createdAt >= bStart && o.createdAt < bEnd);
+    const cStart = new Date(compare.start.getTime() + i * bucketMs);
+    const cEnd = new Date(Math.min(cStart.getTime() + bucketMs, compare.end.getTime()));
+    const cmpBucket =
+      cStart < compare.end
+        ? sales.filter((o) => o.createdAt >= cStart && o.createdAt < cEnd)
+        : [];
     const label = bStart.toLocaleDateString("en-US", {
       month: "short",
       day: "2-digit",
     });
-    // Prior overlay mirrors the same growth as the KPI badges so the chart's
-    // compare line stays consistent (real prior data is unused for now). AUR
-    // follows from the GMV/Units priors, keeping its gap realistic.
     for (const m of metrics) {
-      const value = metricOf(curBucket, m);
-      const prior =
-        m === "aur"
-          ? value * ((1 + growth.units) / (1 + growth.gmv))
-          : value / (1 + growth[m]);
-      series[m].push({ label, value, prior });
+      series[m].push({
+        label,
+        value: metricOf(curBucket, m),
+        prior: metricOf(cmpBucket, m),
+      });
     }
   }
 
