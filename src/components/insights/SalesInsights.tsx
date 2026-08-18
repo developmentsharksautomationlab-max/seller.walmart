@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { prefixFromPathname } from "@/lib/acct";
 import type { DashboardData, MetricKey } from "@/lib/queries";
 import KpiBar from "@/components/insights/KpiBar";
 import AccountSalesChart from "@/components/insights/AccountSalesChart";
@@ -62,6 +64,7 @@ export default function SalesInsights({
 }) {
   const [tab, setTab] = useState<Tab>("account");
   const [metric, setMetric] = useState<MetricKey>("gmv");
+  const prefix = prefixFromPathname(usePathname());
 
   return (
     <div className="flex flex-col gap-5">
@@ -107,7 +110,7 @@ export default function SalesInsights({
                     return (
                       <Link
                         key={r.d}
-                        href={`/?range=${r.d}`}
+                        href={`${prefix || "/"}?range=${r.d}`}
                         scroll={false}
                         className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                           on ? "bg-wm-blue text-white" : "text-slate-500 hover:bg-slate-100"

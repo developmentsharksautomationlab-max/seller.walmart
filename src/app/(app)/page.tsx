@@ -3,6 +3,7 @@ import { Tag, ShoppingCart, UploadCloud } from "lucide-react";
 import SalesInsights from "@/components/insights/SalesInsights";
 import SideRailTabs from "@/components/insights/SideRailTabs";
 import { verifySession } from "@/lib/dal";
+import { getAcctPrefix } from "@/lib/acct-server";
 import { getDashboardData, type DateWindow } from "@/lib/queries";
 
 const ALLOWED_RANGES = [7, 30, 90];
@@ -31,6 +32,7 @@ export default async function DashboardPage({
   }>;
 }) {
   const { userId } = await verifySession();
+  const prefix = await getAcctPrefix();
   const sp = await searchParams;
 
   let current: DateWindow;
@@ -104,21 +106,21 @@ export default async function DashboardPage({
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <Link
-              href="/products"
+              href={`${prefix}/products`}
               className="inline-flex items-center gap-2 rounded-lg bg-wm-blue px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-wm-blue-dark"
             >
               <Tag className="h-4 w-4" />
               Add an item
             </Link>
             <Link
-              href="/import"
+              href={`${prefix}/import`}
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-wm-blue transition-colors hover:bg-slate-50"
             >
               <ShoppingCart className="h-4 w-4" />
               Record an order
             </Link>
             <Link
-              href="/import"
+              href={`${prefix}/import`}
               className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-wm-blue transition-colors hover:bg-slate-50"
             >
               <UploadCloud className="h-4 w-4" />

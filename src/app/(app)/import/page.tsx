@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Package } from "lucide-react";
 import { verifySession } from "@/lib/dal";
+import { getAcctPrefix } from "@/lib/acct-server";
 import { prisma } from "@/lib/prisma";
 import ImportClient from "./import-client";
 import OrderForm from "@/components/OrderForm";
@@ -8,6 +9,7 @@ import GenerateOrders from "@/components/GenerateOrders";
 
 export default async function ImportPage() {
   const { userId } = await verifySession(); // gate the route
+  const prefix = await getAcctPrefix();
 
   const products = await prisma.product.findMany({
     where: { userId },
@@ -27,7 +29,7 @@ export default async function ImportPage() {
               Add a product before recording orders.
             </p>
             <Link
-              href="/products"
+              href={`${prefix}/products`}
               className="mt-3 inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
             >
               <Package className="h-4 w-4" />

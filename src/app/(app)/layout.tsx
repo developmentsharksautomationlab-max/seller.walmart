@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Topbar from "@/components/Topbar";
 import { getUser } from "@/lib/dal";
+import { getAcctPrefix } from "@/lib/acct-server";
 
 export default async function AppLayout({
   children,
@@ -11,7 +12,7 @@ export default async function AppLayout({
   // getUser() runs verifySession(), which redirects to /login when there is no
   // valid session. The extra null check covers a valid session for a deleted user.
   const user = await getUser();
-  if (!user) redirect("/login");
+  if (!user) redirect(`${await getAcctPrefix()}/login`);
 
   return (
     <div className="flex min-h-screen flex-col bg-wm-bg">

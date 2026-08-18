@@ -1,8 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Package } from "lucide-react";
 import type { TopItem } from "@/lib/queries";
+import { prefixFromPathname } from "@/lib/acct";
 
 export default function TopItems({ items }: { items: TopItem[] }) {
+  const prefix = prefixFromPathname(usePathname());
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-slate-200 p-5">
@@ -11,7 +16,7 @@ export default function TopItems({ items }: { items: TopItem[] }) {
           <p className="text-xs text-slate-500">Best sellers by GMV</p>
         </div>
         <Link
-          href="/products"
+          href={`${prefix}/products`}
           className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
         >
           View all items

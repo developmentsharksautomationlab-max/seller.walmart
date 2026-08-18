@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { prefixFromPathname } from "@/lib/acct";
 import {
   Info,
   Search,
@@ -103,6 +105,7 @@ const outlineBtn =
   "inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50";
 
 export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
+  const prefix = prefixFromPathname(usePathname());
   const [tab, setTab] = useState<TabKey>("all");
   const [query, setQuery] = useState("");
   const [searchField, setSearchField] = useState<SearchField>("orderNo");
@@ -308,7 +311,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
             )}
           </div>
           <Link
-            href="/import"
+            href={`${prefix}/import`}
             className="inline-flex items-center gap-2 rounded-lg bg-wm-blue px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-wm-blue-dark"
           >
             <Upload className="h-4 w-4" />

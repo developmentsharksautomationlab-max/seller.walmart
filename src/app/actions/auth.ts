@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { createSession, deleteSession } from "@/lib/session";
+import { getAcctPrefix } from "@/lib/acct-server";
 import {
   SignupSchema,
   LoginSchema,
@@ -69,7 +70,7 @@ export async function signup(
   }
 
   // Outside try/catch: redirect throws a control-flow signal that must propagate.
-  redirect("/");
+  redirect((await getAcctPrefix()) || "/");
 }
 
 export async function login(
@@ -104,10 +105,11 @@ export async function login(
     return { message: "Something went wrong signing in. Please try again." };
   }
 
-  redirect("/");
+  redirect((await getAcctPrefix()) || "/");
 }
 
 export async function logout(): Promise<void> {
+  const prefix = await getAcctPrefix();
   await deleteSession();
-  redirect("/login");
+  redirect(`${prefix}/login`);
 }

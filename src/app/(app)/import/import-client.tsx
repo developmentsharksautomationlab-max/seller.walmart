@@ -2,7 +2,9 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import * as XLSX from "xlsx";
+import { prefixFromPathname } from "@/lib/acct";
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -55,6 +57,7 @@ function downloadTemplate() {
 }
 
 export default function ImportClient() {
+  const prefix = prefixFromPathname(usePathname());
   const [fileName, setFileName] = useState<string | null>(null);
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -174,7 +177,7 @@ export default function ImportClient() {
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Link
-                    href="/"
+                    href={prefix || "/"}
                     className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
                   >
                     View dashboard <ArrowRight className="h-4 w-4" />

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { verifySession } from "@/lib/dal";
+import { getAcctPrefix } from "@/lib/acct-server";
 import { z } from "zod";
 import {
   OrderSchema,
@@ -58,7 +59,7 @@ export async function createOrder(
 
   revalidatePath("/orders");
   revalidatePath("/"); // dashboard metrics depend on orders
-  redirect("/orders");
+  redirect(`${await getAcctPrefix()}/orders`);
 }
 
 // ---- Generate orders from KPI targets -------------------------------------

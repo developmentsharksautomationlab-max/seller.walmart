@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
   Search,
@@ -9,16 +10,24 @@ import {
   Settings,
   ChevronDown,
   LogOut,
+  Users,
 } from "lucide-react";
 import { logout } from "@/app/actions/auth";
+import { parseAcctPath } from "@/lib/acct";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2);
   return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
+// Other account slots to offer from this tab. Each opens in a new tab with
+// its own /u/<n>-scoped session cookie — see src/lib/acct.ts.
+const OTHER_SLOTS = ["1", "2", "3", "4"];
+
 export default function Topbar({ userName }: { userName: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const { acct } = parseAcctPath(pathname);
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6">
@@ -98,8 +107,35 @@ export default function Topbar({ userName }: { userName: string }) {
               <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
                 <div className="border-b border-slate-100 px-4 py-3">
                   <p className="text-sm font-semibold text-slate-900">{userName}</p>
-                  <p className="text-xs text-slate-500">Seller account</p>
+                  <p className="text-xs text-slate-500">
+                    Seller account · Tab {acct}
+                  </p>
                 </div>
+
+                <div className="border-b border-slate-100 px-4 py-2.5">
+                  <p className="flex items-center gap-1.5 pb-1.5 text-xs font-semibold text-slate-500">
+                    <Users className="h-3.5 w-3.5" />
+                    Open another account
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {OTHER_SLOTS.filter((s) => s !== acct).map((s) => (
+                      <a
+                        key={s}
+                        href={s === "1" ? "/" : `/u/${s}/`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="rounded-md border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                      >
+                        Tab {s}
+                      </a>
+                    ))}
+                  </div>
+                  <p className="pt-1.5 text-[11px] text-slate-400">
+                    Opens in a new tab with its own login — sign in with a
+                    different account there.
+                  </p>
+                </div>
+
                 <form action={logout}>
                   <button
                     type="submit"

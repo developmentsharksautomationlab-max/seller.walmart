@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { decrypt, getSessionCookie } from "@/lib/session";
+import { getAcctPrefix } from "@/lib/acct-server";
 import { prisma } from "@/lib/prisma";
 
 /**
@@ -13,7 +14,7 @@ export const verifySession = cache(async (): Promise<{ userId: string }> => {
   const session = await decrypt(cookie);
 
   if (!session?.userId) {
-    redirect("/login");
+    redirect(`${await getAcctPrefix()}/login`);
   }
 
   return { userId: session.userId };

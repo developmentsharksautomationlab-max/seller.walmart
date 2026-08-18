@@ -1,9 +1,16 @@
 import "server-only";
 import { SignJWT, jwtVerify } from "jose";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { ACCT_HEADER, sessionCookieName } from "@/lib/acct";
 
-const SESSION_COOKIE = "session";
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// Each account slot (see src/lib/acct.ts) gets its own cookie name, so a tab
+// pinned to /u/2 never reads or clobbers the session a tab at / is using.
+async function currentCookieName(): Promise<string> {
+  const h = await headers();
+  return sessionCookieName(h.get(ACCT_HEADER) ?? "1");
+}
 
 // Read the secret lazily (at call time) rather than at module-evaluation time.
 // Throwing at the top level breaks Next.js build-time config collection when the
@@ -49,7 +56,7 @@ export async function createSession(userId: string): Promise<void> {
   const session = await encrypt({ userId, expiresAt: expiresAt.toISOString() });
   const cookieStore = await cookies();
 
-  cookieStore.set(SESSION_COOKIE, session, {
+  cookieStore.set(await currentCookieName(), session, {
     httpOnly: true,
     // `secure` must be false on http://localhost or the browser drops the cookie.
     secure: process.env.NODE_ENV === "production",
@@ -61,10 +68,10 @@ export async function createSession(userId: string): Promise<void> {
 
 export async function deleteSession(): Promise<void> {
   const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE);
+  cookieStore.delete(await currentCookieName());
 }
 
 export async function getSessionCookie(): Promise<string | undefined> {
   const cookieStore = await cookies();
-  return cookieStore.get(SESSION_COOKIE)?.value;
+  return cookieStore.get(await currentCookieName())?.value;
 }
