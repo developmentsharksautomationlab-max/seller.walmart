@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Lato, Geist_Mono } from "next/font/google";
+import { AuthProvider } from "@/hooks/useAuth";
 import "./globals.css";
 
 // Walmart's real UI face is "Everyday Sans UI" (Bogle before 2025) — both are
@@ -38,7 +39,7 @@ export default function RootLayout({
         className="min-h-full font-sans text-slate-900"
         suppressHydrationWarning
       >
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

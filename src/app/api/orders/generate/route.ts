@@ -1,72 +1,8 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { verifySession } from "@/lib/dal";
-import { getAcctPrefix } from "@/lib/acct-server";
+import { NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  OrderSchema,
-  ORDER_STATUSES,
-  fieldErrors,
-  type FormState,
-} from "@/lib/definitions";
-
-export async function createOrder(
-  _state: FormState,
-  formData: FormData,
-): Promise<FormState> {
-  const { userId } = await verifySession();
-
-  const parsed = OrderSchema.safeParse({
-    productId: formData.get("productId"),
-    customerName: formData.get("customerName"),
-    quantity: formData.get("quantity"),
-    status: formData.get("status"),
-  });
-  if (!parsed.success) {
-    return { errors: fieldErrors(parsed.error) };
-  }
-
-  const { productId, customerName, quantity, status } = parsed.data;
-
-  // Confirm the product exists AND belongs to this user before using its price.
-  const product = await prisma.product.findFirst({
-    where: { id: productId, userId },
-  });
-  if (!product) {
-    return { errors: { productId: ["Please choose a valid product."] } };
-  }
-
-  try {
-    await prisma.order.create({
-      data: {
-        userId,
-        productId: product.id,
-        productName: product.name,
-        category: product.category,
-        customerName,
-        quantity,
-        unitPrice: product.price,
-        amount: product.price * quantity,
-        status,
-      },
-    });
-  } catch {
-    return { message: "Could not save the order. Please try again." };
-  }
-
-  revalidatePath("/orders");
-  revalidatePath("/"); // dashboard metrics depend on orders
-  redirect(`${await getAcctPrefix()}/orders`);
-}
-
-// ---- Generate orders from KPI targets -------------------------------------
-
-export type GenerateState =
-  | { errors?: Record<string, string[] | undefined>; ok?: string; error?: string }
-  | undefined;
+import { getUserId } from "@/lib/api-auth";
+import { prisma } from "@/lib/prisma";
+import { fieldErrors } from "@/lib/definitions";
 
 const GenerateSchema = z
   .object({
@@ -135,8 +71,6 @@ function weightedSplit(total: number, n: number, lo: number, hi: number): number
   const fsum = factors.reduce((s, f) => s + f, 0);
   const parts = factors.map((f) => Math.max(1, Math.floor((total * f) / fsum)));
 
-  // Hand out (or reclaim) the rounding remainder at random positions so the
-  // parts still sum exactly to `total`.
   let diff = total - parts.reduce((s, p) => s + p, 0);
   let guard = 0;
   while (diff > 0) {
@@ -153,39 +87,24 @@ function weightedSplit(total: number, n: number, lo: number, hi: number): number
   return parts;
 }
 
-export async function generateOrders(
-  _state: GenerateState,
-  formData: FormData,
-): Promise<GenerateState> {
-  const { userId } = await verifySession();
+export async function POST(req: Request) {
+  const userId = await getUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const parsed = GenerateSchema.safeParse({
-    gmv: formData.get("gmv"),
-    units: formData.get("units"),
-    orders: formData.get("orders"),
-    from: formData.get("from"),
-    to: formData.get("to"),
-  });
+  const body = await req.json().catch(() => null);
+  const parsed = GenerateSchema.safeParse(body);
   if (!parsed.success) {
-    return { errors: fieldErrors(parsed.error) };
+    return NextResponse.json({ errors: fieldErrors(parsed.error) }, { status: 400 });
   }
 
   const { gmv, units, orders, from, to } = parsed.data;
 
-  // Exact splits, but with varied per-order sizes (no two orders alike):
-  // quantities sum to `units`, cent amounts sum to `gmv`.
   const qtys = weightedSplit(units, orders, 0.45, 1.9);
   const cents = weightedSplit(Math.round(gmv * 100), orders, 0.3, 2.4);
 
-  // Spread order dates uniformly across the chosen [from, to] window (inclusive).
-  // Parse as LOCAL midnight so the dates line up with the dashboard's
-  // local-time month buckets (no UTC drift across month boundaries).
   const dayMs = 86_400_000;
   const nowMs = Date.now();
   const fromMs = new Date(`${from}T00:00:00`).getTime();
-  // Never stamp an order in the future. The dashboard's current period ends at
-  // "now", so a future-dated order would fall outside the window and the KPIs
-  // would come up short of the exact GMV / Units / Orders targets entered here.
   const upperMs = Math.min(new Date(`${to}T00:00:00`).getTime() + dayMs, nowMs);
   const spanMs = Math.max(1, upperMs - fromMs);
 
@@ -203,8 +122,6 @@ export async function generateOrders(
       quantity,
       unitPrice,
       amount,
-      // Mix of fulfillment states (no Canceled — every generated order counts
-      // toward GMV/Units/Orders so the totals stay exact).
       status: (() => {
         const r = Math.random();
         return r < 0.15 ? "Unshipped" : r < 0.5 ? "Shipped" : "Delivered";
@@ -214,48 +131,17 @@ export async function generateOrders(
   });
 
   try {
-    // Reset first: wipe this user's existing orders so the dashboard KPIs reflect
-    // ONLY the freshly generated set, instead of stacking on top of old values.
-    // Both steps run in one transaction so a failure never leaves the dashboard
-    // empty.
     await prisma.$transaction([
       prisma.order.deleteMany({ where: { userId } }),
       prisma.order.createMany({ data }),
     ]);
   } catch (err) {
     console.error("[generateOrders] failed:", err);
-    return { error: "Could not generate orders. Please try again." };
+    return NextResponse.json(
+      { error: "Could not generate orders. Please try again." },
+      { status: 500 },
+    );
   }
 
-  revalidatePath("/orders");
-  revalidatePath("/"); // dashboard KPIs depend on orders
-
-  return { ok: "Dashboard reset — your generated orders are ready." };
-}
-
-export async function updateOrderStatus(formData: FormData): Promise<void> {
-  const { userId } = await verifySession();
-  const id = String(formData.get("id") ?? "");
-  const parsed = z.enum(ORDER_STATUSES).safeParse(formData.get("status"));
-  if (!id || !parsed.success) return;
-
-  // updateMany with a userId filter enforces ownership (a stray id from another
-  // tenant simply matches no rows).
-  await prisma.order.updateMany({
-    where: { id, userId },
-    data: { status: parsed.data },
-  });
-
-  revalidatePath("/orders");
-  revalidatePath("/"); // dashboard metrics depend on order status
-}
-
-export async function deleteOrder(formData: FormData): Promise<void> {
-  const { userId } = await verifySession();
-  const id = String(formData.get("id") ?? "");
-
-  await prisma.order.deleteMany({ where: { id, userId } });
-
-  revalidatePath("/orders");
-  revalidatePath("/");
+  return NextResponse.json({ ok: "Dashboard reset — your generated orders are ready." });
 }

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   Info,
@@ -18,14 +20,15 @@ import {
   Megaphone,
   GraduationCap,
   Newspaper,
+  Loader2,
   type LucideIcon,
 } from "lucide-react";
-import { getUser, verifySession } from "@/lib/dal";
-import { getAcctPrefix } from "@/lib/acct-server";
-import { prisma } from "@/lib/prisma";
 import SideRailTabs from "@/components/insights/SideRailTabs";
 import HomeFeedbackCard from "@/components/home/HomeFeedbackCard";
 import ItemThumb from "@/components/ItemThumb";
+import { FormError } from "@/components/ui/fields";
+import { useProtectedFetch } from "@/hooks/useProtectedFetch";
+import type { HomeData } from "@/lib/queries";
 
 const usd2 = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -50,47 +53,32 @@ const TONE_TEXT: Record<Tone, string> = {
   bad: "text-rose-600",
 };
 
-export default async function HomePage() {
-  const { userId } = await verifySession();
-  const prefix = await getAcctPrefix();
-  const user = await getUser();
-  const firstName = (user?.name ?? "Seller").split(" ")[0];
+export default function HomePage() {
+  const { data: home, loading, error } = useProtectedFetch<HomeData>("/api/home");
 
-  const [orders, products] = await Promise.all([
-    prisma.order.findMany({
-      where: { userId },
-      select: { amount: true, status: true, createdAt: true },
-    }),
-    prisma.product.findMany({
-      where: { userId },
-      orderBy: { stock: "asc" },
-      select: { id: true, name: true, category: true, price: true, stock: true },
-    }),
-  ]);
+  if (loading) {
+    return (
+      <div className="flex justify-center p-20">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+  if (error || !home) {
+    return <FormError message={error ?? "Something went wrong."} />;
+  }
 
-  // --- metrics ---
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-  const todaysOrders = orders.filter((o) => o.createdAt >= startOfToday).length;
-  const unshipped = orders.filter((o) => o.status === "Unshipped").length;
-  const canceled = orders.filter((o) => o.status === "Canceled").length;
-  const total = orders.length;
-  const fulfilled = orders.filter(
-    (o) => o.status === "Shipped" || o.status === "Delivered",
-  ).length;
-  const balance = orders
-    .filter((o) => o.status !== "Canceled")
-    .reduce((s, o) => s + o.amount, 0);
-  const rating = total ? (4 + fulfilled / total).toFixed(2) : "—";
-  const cancelRate = total ? (canceled / total) * 100 : 0;
-  const onTimeRate = total ? (fulfilled / total) * 100 : 0;
-
-  const stats: { label: string; value: string; icon: LucideIcon }[] = [
-    { label: "Today's Orders", value: todaysOrders.toLocaleString(), icon: Package },
-    { label: "Unshipped Orders", value: unshipped.toLocaleString(), icon: Truck },
-    { label: "Account Rating", value: rating, icon: Star },
-    { label: "Current Balance", value: usd2.format(balance), icon: DollarSign },
-  ];
+  const {
+    firstName,
+    todaysOrders,
+    unshipped,
+    canceled,
+    rating,
+    balance,
+    cancelRate,
+    onTimeRate,
+    totalOrders: total,
+    products,
+  } = home;
 
   // --- restock card ---
   const lowStock = products.filter((p) => p.stock <= 5);
@@ -99,30 +87,37 @@ export default async function HomePage() {
   const more = Math.max(0, candidates.length - thumbs.length);
   const missed = candidates.reduce((s, p) => s + p.price * 60, 0);
 
+  const stats: { label: string; value: string; icon: LucideIcon }[] = [
+    { label: "Today's Orders", value: todaysOrders.toLocaleString(), icon: Package },
+    { label: "Unshipped Orders", value: unshipped.toLocaleString(), icon: Truck },
+    { label: "Account Rating", value: rating, icon: Star },
+    { label: "Current Balance", value: usd2.format(balance), icon: DollarSign },
+  ];
+
   // --- grow your business ---
   const growCards: { title: string; desc: string; href: string; icon: LucideIcon }[] = [
     {
       title: "Add new products",
       desc: "Expand your catalog to reach more shoppers.",
-      href: `${prefix}/products`,
+      href: "/products",
       icon: Plus,
     },
     {
       title: "Import orders in bulk",
       desc: "Upload a spreadsheet to add many orders at once.",
-      href: `${prefix}/import`,
+      href: "/import",
       icon: UploadCloud,
     },
     {
       title: "Manage your orders",
       desc: "Ship, update and track every order in one place.",
-      href: `${prefix}/orders`,
+      href: "/orders",
       icon: ShoppingCart,
     },
     {
       title: "View sales insights",
       desc: "Track GMV, units and trends over time.",
-      href: prefix || "/",
+      href: "/",
       icon: BarChart3,
     },
   ];
@@ -155,21 +150,21 @@ export default async function HomePage() {
     tasks.push({
       text: `${unshipped} order${unshipped === 1 ? "" : "s"} awaiting shipment`,
       cta: "Ship now",
-      href: `${prefix}/orders`,
+      href: "/orders",
       icon: Truck,
     });
   if (lowStock.length > 0)
     tasks.push({
       text: `${lowStock.length} item${lowStock.length === 1 ? "" : "s"} low on stock`,
       cta: "Restock",
-      href: `${prefix}/products`,
+      href: "/products",
       icon: Boxes,
     });
   if (canceled > 0)
     tasks.push({
       text: `${canceled} canceled order${canceled === 1 ? "" : "s"} to review`,
       cta: "Review",
-      href: `${prefix}/orders`,
+      href: "/orders",
       icon: PackageX,
     });
 
@@ -229,7 +224,7 @@ export default async function HomePage() {
                   </p>
                 </div>
                 <Link
-                  href={`${prefix}/products`}
+                  href="/products"
                   className="rounded-full bg-wm-blue px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-wm-blue-dark"
                 >
                   Add items
@@ -259,7 +254,7 @@ export default async function HomePage() {
 
                 <div className="flex items-center gap-2">
                   <Link
-                    href={`${prefix}/products`}
+                    href="/products"
                     className="rounded-full bg-wm-blue px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-wm-blue-dark"
                   >
                     Seller-fulfilled ({candidates.length})
@@ -344,7 +339,7 @@ export default async function HomePage() {
             <div className="mb-4 flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900">Account health</h3>
               <Link
-                href={prefix || "/"}
+                href="/"
                 className="inline-flex items-center gap-1 text-sm font-semibold text-wm-blue hover:underline"
               >
                 View details <ArrowRight className="h-4 w-4" />

@@ -53,12 +53,23 @@ export const ImportRowSchema = z.object({
 });
 export type ImportRow = z.infer<typeof ImportRowSchema>;
 
-// Shape returned by auth/data Server Actions, consumed by useActionState.
+// Shape returned by data Server Actions, consumed by useActionState.
 export type FormState =
   | {
       errors?: Record<string, string[] | undefined>;
       message?: string;
       success?: boolean;
+    }
+  | undefined;
+
+// login/signup return the issued token instead of redirecting server-side —
+// the client stores it (sessionStorage) and navigates itself. See useAuth.
+export type AuthFormState =
+  | {
+      errors?: Record<string, string[] | undefined>;
+      message?: string;
+      token?: string;
+      user?: { id: string; name: string; email: string };
     }
   | undefined;
 

@@ -1,8 +1,6 @@
-"use server";
-
-import { revalidatePath } from "next/cache";
+import { NextResponse } from "next/server";
+import { getUserId } from "@/lib/api-auth";
 import { prisma } from "@/lib/prisma";
-import { verifySession } from "@/lib/dal";
 import { ImportRowSchema, type ImportRow } from "@/lib/definitions";
 
 const MAX_ROWS = 5000;
@@ -14,22 +12,27 @@ export type ImportResult = {
   error?: string;
 };
 
-export async function importData(rows: unknown): Promise<ImportResult> {
-  const { userId } = await verifySession();
+export async function POST(req: Request) {
+  const userId = await getUserId(req);
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rows = await req.json().catch(() => null);
 
   if (!Array.isArray(rows)) {
-    return { imported: 0, skipped: 0, productsCreated: 0, error: "No data received." };
+    return NextResponse.json(
+      { imported: 0, skipped: 0, productsCreated: 0, error: "No data received." },
+      { status: 400 },
+    );
   }
   if (rows.length > MAX_ROWS) {
-    return {
+    return NextResponse.json({
       imported: 0,
       skipped: 0,
       productsCreated: 0,
       error: `Too many rows (max ${MAX_ROWS}). Split the file and try again.`,
-    };
+    });
   }
 
-  // Re-validate every row server-side; silently skip ones that don't pass.
   const valid: ImportRow[] = [];
   let skipped = 0;
   for (const r of rows) {
@@ -38,18 +41,21 @@ export async function importData(rows: unknown): Promise<ImportResult> {
     else skipped++;
   }
   if (valid.length === 0) {
-    return { imported: 0, skipped, productsCreated: 0, error: "No valid rows to import." };
+    return NextResponse.json({
+      imported: 0,
+      skipped,
+      productsCreated: 0,
+      error: "No valid rows to import.",
+    });
   }
 
   try {
-    // Map this user's existing products by lowercased name.
     const existing = await prisma.product.findMany({
       where: { userId },
       select: { id: true, name: true },
     });
     const nameToId = new Map(existing.map((p) => [p.name.toLowerCase(), p.id]));
 
-    // Auto-create a product for each new product name (first row wins for price/category).
     const newProducts = new Map<string, { name: string; category: string; price: number }>();
     for (const r of valid) {
       const key = r.productName.toLowerCase();
@@ -94,12 +100,12 @@ export async function importData(rows: unknown): Promise<ImportResult> {
       })),
     });
 
-    revalidatePath("/");
-    revalidatePath("/orders");
-    revalidatePath("/products");
-    return { imported: valid.length, skipped, productsCreated };
+    return NextResponse.json({ imported: valid.length, skipped, productsCreated });
   } catch (err) {
     console.error("[import] failed:", err);
-    return { imported: 0, skipped, productsCreated: 0, error: "Import failed. Please try again." };
+    return NextResponse.json(
+      { imported: 0, skipped, productsCreated: 0, error: "Import failed. Please try again." },
+      { status: 500 },
+    );
   }
 }

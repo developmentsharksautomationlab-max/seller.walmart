@@ -2,7 +2,7 @@
 
 import { useOptimistic, useTransition } from "react";
 import { ChevronDown, Loader2 } from "lucide-react";
-import { updateOrderStatus } from "@/app/actions/orders";
+import { apiFetch } from "@/lib/client-auth";
 import { ORDER_STATUSES, type OrderStatus } from "@/lib/definitions";
 
 const styles: Record<OrderStatus, string> = {
@@ -15,13 +15,15 @@ const styles: Record<OrderStatus, string> = {
 export default function OrderStatusSelect({
   id,
   status,
+  onChanged,
 }: {
   id: string;
   status: OrderStatus;
+  onChanged: () => void;
 }) {
   // `status` is the server truth. The optimistic value shows the user's pick
   // immediately and then resyncs to the freshly revalidated `status` once the
-  // transition (action + refresh) settles — so the dropdown never snaps back.
+  // transition (fetch + refresh) settles — so the dropdown never snaps back.
   const [optimisticStatus, setOptimisticStatus] = useOptimistic(status);
   const [pending, startTransition] = useTransition();
 
@@ -30,10 +32,11 @@ export default function OrderStatusSelect({
     if (next === optimisticStatus) return;
     startTransition(async () => {
       setOptimisticStatus(next);
-      const fd = new FormData();
-      fd.set("id", id);
-      fd.set("status", next);
-      await updateOrderStatus(fd);
+      await apiFetch(`/api/orders/${id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: next }),
+      });
+      onChanged();
     });
   }
 

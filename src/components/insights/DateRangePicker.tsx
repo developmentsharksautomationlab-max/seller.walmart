@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Calendar, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
-import { prefixFromPathname } from "@/lib/acct";
 
 // ---- date helpers (all local time) ----------------------------------------
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -185,7 +184,6 @@ export default function DateRangePicker({
   };
 }) {
   const router = useRouter();
-  const prefix = prefixFromPathname(usePathname());
   const now = new Date();
   const realToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
@@ -236,7 +234,7 @@ export default function DateRangePicker({
   function apply() {
     if (!start) return;
     const e = end ?? start;
-    let url = `${prefix || "/"}?s=${iso(start)}&e=${iso(e)}`;
+    let url = `/?s=${iso(start)}&e=${iso(e)}`;
     if (compareOn && cStart) {
       url += `&cs=${iso(cStart)}&ce=${iso(cEnd ?? cStart)}`;
     }

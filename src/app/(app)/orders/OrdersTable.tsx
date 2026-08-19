@@ -2,8 +2,6 @@
 
 import { useMemo, useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { prefixFromPathname } from "@/lib/acct";
 import {
   Info,
   Search,
@@ -20,7 +18,7 @@ import {
   CheckCheck,
 } from "lucide-react";
 import type { OrderStatus } from "@/lib/definitions";
-import { updateOrderStatus, deleteOrder } from "@/app/actions/orders";
+import { apiFetch } from "@/lib/client-auth";
 import OrderStatusSelect from "./OrderStatusSelect";
 import ItemThumb from "@/components/ItemThumb";
 
@@ -104,8 +102,13 @@ const td = "px-4 py-3.5 align-middle text-sm";
 const outlineBtn =
   "inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50";
 
-export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
-  const prefix = prefixFromPathname(usePathname());
+export default function OrdersTable({
+  orders,
+  onChanged,
+}: {
+  orders: OrderRow[];
+  onChanged: () => void;
+}) {
   const [tab, setTab] = useState<TabKey>("all");
   const [query, setQuery] = useState("");
   const [searchField, setSearchField] = useState<SearchField>("orderNo");
@@ -209,27 +212,29 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
     const ids = [...selected];
     startTransition(async () => {
       await Promise.all(
-        ids.map((id) => {
-          const fd = new FormData();
-          fd.set("id", id);
-          fd.set("status", status);
-          return updateOrderStatus(fd);
-        }),
+        ids.map((id) =>
+          apiFetch(`/api/orders/${id}`, {
+            method: "PATCH",
+            body: JSON.stringify({ status }),
+          }),
+        ),
       );
       setSelected(new Set());
+      onChanged();
     });
   }
   function bulkDelete() {
     const ids = [...selected];
     startTransition(async () => {
-      await Promise.all(
-        ids.map((id) => {
-          const fd = new FormData();
-          fd.set("id", id);
-          return deleteOrder(fd);
-        }),
-      );
+      await Promise.all(ids.map((id) => apiFetch(`/api/orders/${id}`, { method: "DELETE" })));
       setSelected(new Set());
+      onChanged();
+    });
+  }
+  function deleteOne(id: string) {
+    startTransition(async () => {
+      await apiFetch(`/api/orders/${id}`, { method: "DELETE" });
+      onChanged();
     });
   }
 
@@ -311,7 +316,7 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
             )}
           </div>
           <Link
-            href={`${prefix}/import`}
+            href="/import"
             className="inline-flex items-center gap-2 rounded-lg bg-wm-blue px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-wm-blue-dark"
           >
             <Upload className="h-4 w-4" />
@@ -572,19 +577,17 @@ export default function OrdersTable({ orders }: { orders: OrderRow[] }) {
                     {cols.qty && <td className={`${td} text-slate-700`}>{r.quantity}</td>}
                     {cols.shipFrom && <td className={`${td} text-slate-600`}>USA</td>}
                     <td className={td}>
-                      <OrderStatusSelect id={r.id} status={r.status} />
+                      <OrderStatusSelect id={r.id} status={r.status} onChanged={onChanged} />
                     </td>
                     <td className="px-4 py-3.5 text-right">
-                      <form action={deleteOrder}>
-                        <input type="hidden" name="id" value={r.id} />
-                        <button
-                          type="submit"
-                          title="Delete order"
-                          className="inline-flex rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </form>
+                      <button
+                        type="button"
+                        onClick={() => deleteOne(r.id)}
+                        title="Delete order"
+                        className="inline-flex rounded-lg p-2 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </td>
                   </tr>
                 ))

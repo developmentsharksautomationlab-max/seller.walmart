@@ -1,22 +1,24 @@
-import { verifySession } from "@/lib/dal";
-import { prisma } from "@/lib/prisma";
+"use client";
+
+import { Loader2 } from "lucide-react";
+import { FormError } from "@/components/ui/fields";
+import { useProtectedFetch } from "@/hooks/useProtectedFetch";
 import CatalogClient, { type CatalogRow } from "./CatalogClient";
 
-export default async function CatalogPage() {
-  const { userId } = await verifySession();
-  const products = await prisma.product.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-  });
+export default function CatalogPage() {
+  const { data: products, loading, error, refetch } =
+    useProtectedFetch<CatalogRow[]>("/api/products");
 
-  const rows: CatalogRow[] = products.map((p) => ({
-    id: p.id,
-    name: p.name,
-    category: p.category,
-    price: p.price,
-    stock: p.stock,
-    createdAtIso: p.createdAt.toISOString(),
-  }));
+  if (loading) {
+    return (
+      <div className="flex justify-center p-20">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+  if (error || !products) {
+    return <FormError message={error ?? "Something went wrong."} />;
+  }
 
-  return <CatalogClient products={rows} />;
+  return <CatalogClient products={products} onChanged={refetch} />;
 }

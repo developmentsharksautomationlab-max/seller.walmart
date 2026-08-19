@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { createOrder } from "@/app/actions/orders";
-import { ORDER_STATUSES } from "@/lib/definitions";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/client-auth";
+import { ORDER_STATUSES, type FormState } from "@/lib/definitions";
 import {
   inputClass,
   labelClass,
@@ -19,12 +20,31 @@ const money = new Intl.NumberFormat("en-US", {
 });
 
 export default function OrderForm({ products }: { products: ProductOption[] }) {
-  const [state, action, pending] = useActionState(createOrder, undefined);
+  const router = useRouter();
+  const [state, setState] = useState<FormState>(undefined);
+  const [pending, startTransition] = useTransition();
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [quantity, setQuantity] = useState(1);
 
   const selected = products.find((p) => p.id === productId);
   const total = selected ? selected.price * (quantity || 0) : 0;
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await apiFetch("/api/orders", {
+        method: "POST",
+        body: JSON.stringify(Object.fromEntries(fd)),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setState(body ?? { message: "Could not save the order. Please try again." });
+        return;
+      }
+      router.push("/orders");
+    });
+  }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -33,7 +53,7 @@ export default function OrderForm({ products }: { products: ProductOption[] }) {
         The amount is calculated from the product price.
       </p>
 
-      <form action={action} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {state?.message && (
           <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {state.message}

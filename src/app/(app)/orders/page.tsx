@@ -1,26 +1,23 @@
-import { verifySession } from "@/lib/dal";
-import { prisma } from "@/lib/prisma";
-import type { OrderStatus } from "@/lib/definitions";
+"use client";
+
+import { Loader2 } from "lucide-react";
+import { FormError } from "@/components/ui/fields";
+import { useProtectedFetch } from "@/hooks/useProtectedFetch";
 import OrdersTable, { type OrderRow } from "./OrdersTable";
 
-export default async function OrdersPage() {
-  const { userId } = await verifySession();
+export default function OrdersPage() {
+  const { data: orders, loading, error, refetch } = useProtectedFetch<OrderRow[]>("/api/orders");
 
-  const orders = await prisma.order.findMany({
-    where: { userId },
-    orderBy: { createdAt: "desc" },
-  });
+  if (loading) {
+    return (
+      <div className="flex justify-center p-20">
+        <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+  if (error || !orders) {
+    return <FormError message={error ?? "Something went wrong."} />;
+  }
 
-  const rows: OrderRow[] = orders.map((o) => ({
-    id: o.id,
-    productName: o.productName,
-    category: o.category,
-    customerName: o.customerName,
-    quantity: o.quantity,
-    amount: o.amount,
-    status: o.status as OrderStatus,
-    createdAtIso: o.createdAt.toISOString(),
-  }));
-
-  return <OrdersTable orders={rows} />;
+  return <OrdersTable orders={orders} onChanged={refetch} />;
 }

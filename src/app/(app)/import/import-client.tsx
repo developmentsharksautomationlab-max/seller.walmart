@@ -2,9 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import * as XLSX from "xlsx";
-import { prefixFromPathname } from "@/lib/acct";
 import {
   UploadCloud,
   FileSpreadsheet,
@@ -15,7 +13,8 @@ import {
   ArrowRight,
   CalendarDays,
 } from "lucide-react";
-import { importData, type ImportResult } from "@/app/actions/import";
+import { apiFetch } from "@/lib/client-auth";
+import type { ImportResult } from "@/app/api/import/route";
 import {
   buildColumnMap,
   toPreview,
@@ -57,7 +56,6 @@ function downloadTemplate() {
 }
 
 export default function ImportClient() {
-  const prefix = prefixFromPathname(usePathname());
   const [fileName, setFileName] = useState<string | null>(null);
   const [rows, setRows] = useState<PreviewRow[]>([]);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -125,7 +123,17 @@ export default function ImportClient() {
         status: r.status,
         date: r.date ?? fallbackIso,
       }));
-      setResult(await importData(payload));
+      const res = await apiFetch("/api/import", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const body: ImportResult = await res.json().catch(() => ({
+        imported: 0,
+        skipped: 0,
+        productsCreated: 0,
+        error: "Import failed. Please try again.",
+      }));
+      setResult(body);
     });
   }
 
@@ -177,7 +185,7 @@ export default function ImportClient() {
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Link
-                    href={prefix || "/"}
+                    href="/"
                     className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
                   >
                     View dashboard <ArrowRight className="h-4 w-4" />

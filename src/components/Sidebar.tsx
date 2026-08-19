@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { parseAcctPath } from "@/lib/acct";
 import {
   Home,
   ClipboardList,
@@ -52,9 +51,7 @@ const baseRow =
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { acct, innerPath } = parseAcctPath(pathname);
-  const prefix = acct === "1" ? "" : `/u/${acct}`;
-  const isInsights = innerPath === "/";
+  const isInsights = pathname === "/";
 
   return (
     <aside className="hidden w-60 shrink-0 flex-col justify-between border-r border-slate-200 bg-white lg:flex">
@@ -75,11 +72,11 @@ export default function Sidebar() {
                 </div>
                 <div className="ml-9 flex flex-col gap-0.5">
                   {item.children.map((c) => {
-                    const active = innerPath === c.href;
+                    const active = pathname === c.href;
                     return (
                       <Link
                         key={c.label}
-                        href={prefix + c.href}
+                        href={c.href}
                         className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
                           active
                             ? "font-semibold text-wm-blue"
@@ -102,7 +99,7 @@ export default function Sidebar() {
 
           // "/" is the Sales Insights dashboard, highlighted via the Analytics
           // child above — no top-level item owns "/", so a simple prefix match works.
-          const active = item.href ? innerPath.startsWith(item.href) : false;
+          const active = item.href ? pathname.startsWith(item.href) : false;
 
           if (!item.href) {
             return (
@@ -119,7 +116,7 @@ export default function Sidebar() {
           return (
             <Link
               key={item.label}
-              href={prefix + item.href}
+              href={item.href}
               className={`${baseRow} ${
                 active
                   ? "bg-blue-50 text-wm-blue"

@@ -17,7 +17,7 @@ import {
   Pencil,
   X,
 } from "lucide-react";
-import { deleteProduct, updateProduct } from "@/app/actions/products";
+import { apiFetch } from "@/lib/client-auth";
 import { inputClass, labelClass } from "@/components/ui/styles";
 import ItemThumb from "@/components/ItemThumb";
 
@@ -99,7 +99,13 @@ const PILL =
 const th = "px-4 py-3 text-left text-xs font-semibold text-slate-500 whitespace-nowrap";
 const td = "px-4 py-3.5 align-middle text-sm";
 
-export default function CatalogClient({ products }: { products: CatalogRow[] }) {
+export default function CatalogClient({
+  products,
+  onChanged,
+}: {
+  products: CatalogRow[];
+  onChanged: () => void;
+}) {
   const [tab, setTab] = useState<TabKey>("all");
   const [query, setQuery] = useState("");
   const [searchField, setSearchField] = useState<"sku" | "name">("sku");
@@ -189,26 +195,22 @@ export default function CatalogClient({ products }: { products: CatalogRow[] }) 
     const ids = [...selected];
     startTransition(async () => {
       await Promise.all(
-        ids.map((id) => {
-          const fd = new FormData();
-          fd.set("id", id);
-          return deleteProduct(fd);
-        }),
+        ids.map((id) => apiFetch(`/api/products/${id}`, { method: "DELETE" })),
       );
       setSelected(new Set());
+      onChanged();
     });
   }
 
   function deleteOne(id: string) {
     startTransition(async () => {
-      const fd = new FormData();
-      fd.set("id", id);
-      await deleteProduct(fd);
+      await apiFetch(`/api/products/${id}`, { method: "DELETE" });
       setSelected((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
+      onChanged();
     });
   }
 
@@ -627,8 +629,12 @@ export default function CatalogClient({ products }: { products: CatalogRow[] }) 
             pending={pending}
             onSubmit={(fd) =>
               startTransition(async () => {
-                await updateProduct(fd);
+                await apiFetch(`/api/products/${fd.get("id")}`, {
+                  method: "PATCH",
+                  body: JSON.stringify(Object.fromEntries(fd)),
+                });
                 setEditItem(null);
+                onChanged();
               })
             }
           />
@@ -646,17 +652,20 @@ export default function CatalogClient({ products }: { products: CatalogRow[] }) 
             pending={pending}
             onSubmit={(price, stock) =>
               startTransition(async () => {
+                const data: Record<string, string> = {};
+                if (price !== "") data.price = price;
+                if (stock !== "") data.stock = stock;
                 await Promise.all(
-                  [...selected].map((id) => {
-                    const fd = new FormData();
-                    fd.set("id", id);
-                    if (price !== "") fd.set("price", price);
-                    if (stock !== "") fd.set("stock", stock);
-                    return updateProduct(fd);
-                  }),
+                  [...selected].map((id) =>
+                    apiFetch(`/api/products/${id}`, {
+                      method: "PATCH",
+                      body: JSON.stringify(data),
+                    }),
+                  ),
                 );
                 setBulkEditOpen(false);
                 setSelected(new Set());
+                onChanged();
               })
             }
           />

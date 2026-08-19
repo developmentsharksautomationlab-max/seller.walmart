@@ -1,14 +1,18 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useState, useTransition } from "react";
 import { Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
-import { generateOrders } from "@/app/actions/orders";
+import { apiFetch } from "@/lib/client-auth";
 import {
   inputClass,
   labelClass,
   primaryBtnClass,
   errorTextClass,
 } from "@/components/ui/styles";
+
+type GenerateState =
+  | { errors?: Record<string, string[] | undefined>; ok?: string; error?: string }
+  | undefined;
 
 const money = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -19,7 +23,8 @@ const money = new Intl.NumberFormat("en-US", {
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 export default function GenerateOrders() {
-  const [state, action, pending] = useActionState(generateOrders, undefined);
+  const [state, setState] = useState<GenerateState>(undefined);
+  const [pending, startTransition] = useTransition();
   const [gmv, setGmv] = useState(5000);
   const [units, setUnits] = useState(60);
   const [orders, setOrders] = useState(25);
@@ -28,6 +33,18 @@ export default function GenerateOrders() {
 
   // AUR is derived: GMV ÷ Units. Shown live so the targets stay consistent.
   const aur = units > 0 ? gmv / units : 0;
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    startTransition(async () => {
+      const res = await apiFetch("/api/orders/generate", {
+        method: "POST",
+        body: JSON.stringify({ gmv, units, orders, from, to }),
+      });
+      const body = await res.json().catch(() => null);
+      setState(body ?? { error: "Could not generate orders. Please try again." });
+    });
+  }
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -42,7 +59,7 @@ export default function GenerateOrders() {
         filled in automatically to match, across the dates you choose.
       </p>
 
-      <form action={action} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {state?.ok && (
           <p className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
             <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />

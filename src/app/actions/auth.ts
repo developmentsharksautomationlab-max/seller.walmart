@@ -1,15 +1,13 @@
 "use server";
 
 import bcrypt from "bcryptjs";
-import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { createSession, deleteSession } from "@/lib/session";
-import { getAcctPrefix } from "@/lib/acct-server";
+import { createToken } from "@/lib/token";
 import {
   SignupSchema,
   LoginSchema,
   fieldErrors,
-  type FormState,
+  type AuthFormState,
 } from "@/lib/definitions";
 
 function isUniqueViolation(err: unknown): boolean {
@@ -22,9 +20,9 @@ function isUniqueViolation(err: unknown): boolean {
 }
 
 export async function signup(
-  _state: FormState,
+  _state: AuthFormState,
   formData: FormData,
-): Promise<FormState> {
+): Promise<AuthFormState> {
   const parsed = SignupSchema.safeParse({
     name: formData.get("name"),
     email: formData.get("email"),
@@ -37,7 +35,6 @@ export async function signup(
   const { name, email, password } = parsed.data;
   const normalizedEmail = email.toLowerCase();
 
-  let userId: string;
   try {
     const existing = await prisma.user.findUnique({
       where: { email: normalizedEmail },
@@ -51,11 +48,11 @@ export async function signup(
     const passwordHash = await bcrypt.hash(password, 10);
     const user = await prisma.user.create({
       data: { name, email: normalizedEmail, passwordHash },
-      select: { id: true },
+      select: { id: true, name: true, email: true },
     });
-    userId = user.id;
 
-    await createSession(userId);
+    const token = await createToken(user.id);
+    return { token, user };
   } catch (err) {
     // Race: a concurrent signup created the same email between our check and insert.
     if (isUniqueViolation(err)) {
@@ -68,15 +65,12 @@ export async function signup(
       message: "Something went wrong creating your account. Please try again.",
     };
   }
-
-  // Outside try/catch: redirect throws a control-flow signal that must propagate.
-  redirect((await getAcctPrefix()) || "/");
 }
 
 export async function login(
-  _state: FormState,
+  _state: AuthFormState,
   formData: FormData,
-): Promise<FormState> {
+): Promise<AuthFormState> {
   const parsed = LoginSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
@@ -88,7 +82,7 @@ export async function login(
   const { email, password } = parsed.data;
   // Same generic error for unknown email or wrong password — don't reveal which
   // emails have accounts.
-  const invalid: FormState = { message: "Invalid email or password." };
+  const invalid: AuthFormState = { message: "Invalid email or password." };
 
   try {
     const user = await prisma.user.findUnique({
@@ -99,17 +93,10 @@ export async function login(
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) return invalid;
 
-    await createSession(user.id);
+    const token = await createToken(user.id);
+    return { token, user: { id: user.id, name: user.name, email: user.email } };
   } catch (err) {
     console.error("[login] failed:", err);
     return { message: "Something went wrong signing in. Please try again." };
   }
-
-  redirect((await getAcctPrefix()) || "/");
-}
-
-export async function logout(): Promise<void> {
-  const prefix = await getAcctPrefix();
-  await deleteSession();
-  redirect(`${prefix}/login`);
 }

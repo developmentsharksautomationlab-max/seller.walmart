@@ -1,17 +1,26 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { signup } from "@/app/actions/auth";
 import { FormError } from "@/components/ui/fields";
-import { prefixFromPathname } from "@/lib/acct";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function SignupForm() {
   const [state, action, pending] = useActionState(signup, undefined);
   const [showPassword, setShowPassword] = useState(false);
-  const prefix = prefixFromPathname(usePathname());
+  const router = useRouter();
+  const auth = useAuth();
+
+  useEffect(() => {
+    if (state?.token && state.user) {
+      auth.login(state.token, state.user);
+      router.push("/");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <div>
@@ -108,7 +117,7 @@ export default function SignupForm() {
 
       <p className="mt-6 text-center text-sm text-slate-600">
         Already have an account?{" "}
-        <Link href={`${prefix}/login`} className="font-semibold text-wm-blue hover:underline">
+        <Link href="/login" className="font-semibold text-wm-blue hover:underline">
           Sign in
         </Link>
       </p>

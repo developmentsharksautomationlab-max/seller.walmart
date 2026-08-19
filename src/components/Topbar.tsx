@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname } from "next/navigation";
 import {
   LayoutGrid,
   Search,
@@ -11,18 +10,17 @@ import {
   ChevronDown,
   LogOut,
 } from "lucide-react";
-import { logout } from "@/app/actions/auth";
-import { parseAcctPath } from "@/lib/acct";
+import { useAuth } from "@/hooks/useAuth";
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/).slice(0, 2);
   return parts.map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
 }
 
-export default function Topbar({ userName }: { userName: string }) {
+export default function Topbar() {
   const [menuOpen, setMenuOpen] = useState(false);
-  const pathname = usePathname();
-  const { acct } = parseAcctPath(pathname);
+  const { user, logout } = useAuth();
+  const userName = user?.name ?? "";
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-slate-200 bg-white px-4 sm:px-6">
@@ -102,20 +100,17 @@ export default function Topbar({ userName }: { userName: string }) {
               <div className="absolute right-0 top-full z-50 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
                 <div className="border-b border-slate-100 px-4 py-3">
                   <p className="text-sm font-semibold text-slate-900">{userName}</p>
-                  <p className="text-xs text-slate-500">
-                    Seller account · Tab {acct}
-                  </p>
+                  <p className="text-xs text-slate-500">Seller account</p>
                 </div>
 
-                <form action={logout}>
-                  <button
-                    type="submit"
-                    className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign out
-                  </button>
-                </form>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </button>
               </div>
             </>
           )}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
-import { createProduct } from "@/app/actions/products";
+import { useState, useTransition } from "react";
+import { apiFetch } from "@/lib/client-auth";
+import type { FormState } from "@/lib/definitions";
 import {
   inputClass,
   labelClass,
@@ -10,14 +11,29 @@ import {
 } from "@/components/ui/styles";
 
 export default function ProductForm({ onSuccess }: { onSuccess?: () => void }) {
-  const [state, action, pending] = useActionState(createProduct, undefined);
+  const [state, setState] = useState<FormState>(undefined);
+  const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (state?.success) onSuccess?.();
-  }, [state, onSuccess]);
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const res = await apiFetch("/api/products", {
+        method: "POST",
+        body: JSON.stringify(Object.fromEntries(fd)),
+      });
+      const body = await res.json().catch(() => null);
+      if (!res.ok) {
+        setState(body ?? { message: "Something went wrong. Please try again." });
+        return;
+      }
+      setState({ success: true });
+      onSuccess?.();
+    });
+  }
 
   return (
-    <form action={action} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         {state?.message && (
           <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {state.message}

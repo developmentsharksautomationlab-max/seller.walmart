@@ -1,17 +1,26 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { login } from "@/app/actions/auth";
 import { FormError } from "@/components/ui/fields";
-import { prefixFromPathname } from "@/lib/acct";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function LoginForm() {
   const [state, action, pending] = useActionState(login, undefined);
   const [showPassword, setShowPassword] = useState(false);
-  const prefix = prefixFromPathname(usePathname());
+  const router = useRouter();
+  const auth = useAuth();
+
+  useEffect(() => {
+    if (state?.token && state.user) {
+      auth.login(state.token, state.user);
+      router.push("/");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
 
   return (
     <div>
@@ -88,7 +97,7 @@ export default function LoginForm() {
       <p className="mt-6 text-center text-sm text-slate-600">
         Forgot your{" "}
         <Link
-          href={`${prefix}/signup`}
+          href="/signup"
           className="font-semibold text-wm-blue hover:underline"
         >
           Password
