@@ -10,12 +10,12 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-lato-sans);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: #f2f4f7;
   color: #1a1a1a;
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-lato-sans), Arial, Helvetica, sans-serif;
 }

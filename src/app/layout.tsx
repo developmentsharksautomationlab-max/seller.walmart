@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Lato, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Walmart's real UI face is "Everyday Sans UI" (Bogle before 2025) — both are
+// proprietary, commissioned exclusively for Walmart, so they aren't
+// obtainable for a third-party project. Lato is the closest freely-licensed
+// match: same humanist classification as Antique Olive (which Everyday Sans
+// is based on) and, unlike more display-y alternatives (Raleway, Josefin
+// Sans), it stays legible at the small sizes a dense dashboard needs.
+const lato = Lato({
+  variable: "--font-lato-sans",
   subsets: ["latin"],
+  weight: ["400", "700", "900"],
 });
 
 const geistMono = Geist_Mono({
@@ -25,7 +32,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${lato.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body
         className="min-h-full font-sans text-slate-900"
