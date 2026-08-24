@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Headphones,
   Keyboard,
@@ -106,15 +107,32 @@ function pick(name: string, category: string): [LucideIcon, ThemeKey] {
 export default function ItemThumb({
   category,
   title,
+  imageUrl,
   size = "md",
 }: {
   category: string;
   title?: string;
+  imageUrl?: string | null;
   size?: "sm" | "md";
 }) {
   const [Icon, themeKey] = pick(title ?? "", category);
   const box = size === "sm" ? "h-9 w-9" : "h-12 w-12";
   const ic = size === "sm" ? "h-4 w-4" : "h-5 w-5";
+  const [failed, setFailed] = useState(false);
+
+  if (imageUrl && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={imageUrl}
+        alt={title ?? category}
+        title={title ?? category}
+        className={`${box} shrink-0 rounded-lg bg-white object-contain ring-1 ring-black/5`}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
   return (
     <div
       title={title ?? category}

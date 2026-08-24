@@ -12,7 +12,13 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
 
-  const data: { name?: string; category?: string; price?: number; stock?: number } = {};
+  const data: {
+    name?: string;
+    category?: string;
+    price?: number;
+    stock?: number;
+    imageUrl?: string | null;
+  } = {};
   if (typeof body.name === "string" && body.name.trim()) data.name = body.name.trim();
   if (typeof body.category === "string" && body.category.trim())
     data.category = body.category.trim();
@@ -24,6 +30,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const n = Number(body.stock);
     if (Number.isInteger(n) && n >= 0) data.stock = n;
   }
+  if (typeof body.imageUrl === "string") data.imageUrl = body.imageUrl.trim() || null;
   if (Object.keys(data).length === 0) return NextResponse.json({ success: true });
 
   // updateMany with a userId filter enforces ownership.

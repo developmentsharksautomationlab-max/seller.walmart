@@ -27,6 +27,9 @@ export const ProductSchema = z.object({
     .number()
     .int("Stock must be a whole number.")
     .min(0, "Stock cannot be negative."),
+  imageUrl: z
+    .union([z.string().trim().url("Enter a valid image URL."), z.literal("")])
+    .optional(),
 });
 
 export const OrderSchema = z.object({

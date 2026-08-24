@@ -19,6 +19,7 @@ export async function GET(req: Request) {
     category: p.category,
     price: p.price,
     stock: p.stock,
+    imageUrl: p.imageUrl,
     createdAtIso: p.createdAt.toISOString(),
   }));
 
@@ -35,10 +36,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ errors: fieldErrors(parsed.error) }, { status: 400 });
   }
 
-  const { name, category, price, stock } = parsed.data;
+  const { name, category, price, stock, imageUrl } = parsed.data;
   try {
     const product = await prisma.product.create({
-      data: { userId, name, category, price, stock },
+      data: { userId, name, category, price, stock, imageUrl: imageUrl || null },
     });
     return NextResponse.json({ success: true, product });
   } catch {

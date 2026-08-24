@@ -3,6 +3,7 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { createToken } from "@/lib/token";
+import { STARTER_CATALOG } from "@/lib/starter-catalog";
 import {
   SignupSchema,
   LoginSchema,
@@ -50,6 +51,14 @@ export async function signup(
       data: { name, email: normalizedEmail, passwordHash },
       select: { id: true, name: true, email: true },
     });
+
+    // Best-effort: a fresh catalog so the dashboard isn't empty. Don't fail
+    // signup over it.
+    await prisma.product
+      .createMany({
+        data: STARTER_CATALOG.map((item) => ({ userId: user.id, ...item })),
+      })
+      .catch((err) => console.error("[signup] starter catalog seed failed:", err));
 
     const token = await createToken(user.id);
     return { token, user };

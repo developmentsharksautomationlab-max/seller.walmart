@@ -27,6 +27,7 @@ export type CatalogRow = {
   category: string;
   price: number;
   stock: number;
+  imageUrl?: string | null;
   createdAtIso: string;
 };
 
@@ -577,7 +578,12 @@ export default function CatalogClient({
                     </td>
                     <td className={td}>
                       <div className="flex items-center gap-3">
-                        <ItemThumb category={r.category} title={r.name} size="sm" />
+                        <ItemThumb
+                          category={r.category}
+                          title={r.name}
+                          imageUrl={r.imageUrl}
+                          size="sm"
+                        />
                         <span className="max-w-[18rem] truncate font-medium text-slate-900">
                           {r.name}
                         </span>
@@ -869,6 +875,19 @@ function EditForm({
           defaultValue={item.category}
           className={inputClass}
           required
+        />
+      </div>
+      <div>
+        <label htmlFor="edit-imageUrl" className={labelClass}>
+          Image URL
+        </label>
+        <input
+          id="edit-imageUrl"
+          name="imageUrl"
+          type="url"
+          placeholder="https://…"
+          defaultValue={item.imageUrl ?? ""}
+          className={inputClass}
         />
       </div>
       <div className="grid grid-cols-2 gap-3">

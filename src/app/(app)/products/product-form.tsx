@@ -82,6 +82,22 @@ export default function ProductForm({ onSuccess }: { onSuccess?: () => void }) {
           )}
         </div>
 
+        <div>
+          <label htmlFor="imageUrl" className={labelClass}>
+            Image URL <span className="font-normal text-slate-400">(optional)</span>
+          </label>
+          <input
+            id="imageUrl"
+            name="imageUrl"
+            type="url"
+            placeholder="https://…"
+            className={inputClass}
+          />
+          {state?.errors?.imageUrl && (
+            <p className={errorTextClass}>{state.errors.imageUrl[0]}</p>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label htmlFor="price" className={labelClass}>
