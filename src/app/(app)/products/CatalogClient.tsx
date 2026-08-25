@@ -232,8 +232,8 @@ export default function CatalogClient({
         r.sku,
         r.status,
         r.price.toFixed(2),
-        "Not eligible",
-        "Not eligible",
+        "Eligible",
+        "Eligible",
         r.stock,
       ].join(","),
     );
@@ -602,8 +602,12 @@ export default function CatalogClient({
                         {usd.format(r.price)}
                       </td>
                     )}
-                    {cols.bprice && <td className={`${td} text-slate-400`}>Not eligible</td>}
-                    {cols.bstrategy && <td className={`${td} text-slate-400`}>Not eligible</td>}
+                    {cols.bprice && (
+                      <td className={`${td} font-medium text-emerald-600`}>Eligible</td>
+                    )}
+                    {cols.bstrategy && (
+                      <td className={`${td} font-medium text-emerald-600`}>Eligible</td>
+                    )}
                     {cols.inventory && (
                       <td className={`${td} text-slate-700`}>{r.stock.toLocaleString()}</td>
                     )}
