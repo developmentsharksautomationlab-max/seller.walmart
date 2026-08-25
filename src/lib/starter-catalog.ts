@@ -85,7 +85,7 @@ export const STARTER_CATALOG = [
     name: 'Lasko Cyclone Max 18" 4-Speed Oscillating Fan, Remote',
     category: "Home & Living",
     price: 66.99,
-    stock: 0,
+    stock: 16,
     imageUrl:
       "https://target.scene7.com/is/image/Target/GUEST_f790ea26-da21-45b8-81cc-7ac0275bfecd?wid=300&hei=300&fmt=pjpeg",
   },
