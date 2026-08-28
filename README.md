@@ -1,24 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+A multi-tenant sales dashboard built with Next.js, Prisma, and SQLite.
 
 ## Getting Started
 
-First, run the development server:
+No external database or account setup needed — the app ships with a self-contained
+SQLite database that lives in `prisma/dev.db`.
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Running `npm run dev` automatically creates/updates `prisma/dev.db` (via `prisma db push`)
+before starting the server. Open [http://localhost:3000](http://localhost:3000) and sign up
+for a new account — each account's products and orders are scoped to that user.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Optionally, load a demo account with sample products and orders:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run seed
+# email: demo@saleshub.app  password: demo1234
+```
+
+## Scripts
+
+- `npm run dev` — start the dev server (auto-provisions the local SQLite DB first)
+- `npm run build` — production build (used by the Vercel deployment, which targets
+  Postgres/Neon instead of SQLite — see `prisma/schema.production.prisma`)
+- `npm run seed` — reset and seed a demo account with sample data
+- `npm run db:studio` — open Prisma Studio to browse the local database
 
 ## Learn More
 
@@ -26,11 +35,3 @@ To learn more about Next.js, take a look at the following resources:
 
 - [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
 - [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

@@ -30,8 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — .env is committed on purpose: it holds only local SQLite/dev-only
+# defaults so `git clone` + `npm run dev` works with no external setup.
+# .env.local etc. stay ignored since they can hold personal/CLI secrets (e.g. Vercel tokens).
+.env.local
+.env.*.local
 
 # vercel
 .vercel
@@ -48,4 +51,3 @@ next-env.d.ts
 /.devlog.txt
 
 .vercel
-.env*

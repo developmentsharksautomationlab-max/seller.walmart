@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push && next build",
+    "predev": "prisma generate && prisma db push",
+    "build": "node scripts/select-schema.mjs && prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "eslint",
     "seed": "node --env-file=.env scripts/verify.mjs",

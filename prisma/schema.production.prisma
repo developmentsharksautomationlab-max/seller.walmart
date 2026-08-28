@@ -1,13 +1,20 @@
 // Prisma schema for the multi-tenant sales dashboard.
 // Each User owns their own Products and Orders — all queries are scoped by userId.
+//
+// This is the PRODUCTION (Vercel + Neon Postgres) variant. It is swapped into
+// prisma/schema.prisma at build time by scripts/select-schema.mjs — do not edit
+// prisma/schema.prisma directly to point it at Postgres, edit this file instead.
+// The default prisma/schema.prisma stays SQLite so a fresh `git clone` + `npm run dev`
+// works with zero external setup.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
