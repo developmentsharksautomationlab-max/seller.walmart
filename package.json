@@ -4,11 +4,12 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "predev": "prisma generate && prisma db push",
-    "build": "prisma generate && prisma db push && next build",
+    "predev": "npm run prisma:setup",
+    "prisma:setup": "cross-env DATABASE_URL=file:./dev.db prisma db push",
+    "build": "npm run prisma:setup && next build",
     "start": "next start",
     "lint": "eslint",
-    "db:studio": "prisma studio"
+    "db:studio": "cross-env DATABASE_URL=file:./dev.db prisma studio"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -28,6 +29,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "cross-env": "^10.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "prisma": "^6.19.3",

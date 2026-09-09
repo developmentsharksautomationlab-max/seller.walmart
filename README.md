@@ -27,10 +27,13 @@ To fill the dashboard with sample data, use the app itself once you're signed in
 Import the repo into Vercel and deploy — no environment variables or database
 required. The build runs `prisma db push` to bake the schema into a SQLite file,
 and at runtime the app copies it to `/tmp` (the only writable path on Vercel).
+Any `DATABASE_URL` left over in the Vercel project (e.g. from an old Postgres
+setup) is ignored — the build pins its own `file:` URL and the runtime always
+uses `/tmp`.
 
 Because `/tmp` is per-instance and cleared when an instance recycles, **data on
 Vercel is not permanent** — it's meant for demos. For persistent storage, point
-`DATABASE_URL` at a real database and switch the Prisma `datasource` provider.
+the Prisma `datasource` at a real database instead.
 
 Optionally set your own `SESSION_SECRET` (`openssl rand -base64 32`) in the Vercel
 project settings; otherwise it falls back to the dev value in `.env`.
