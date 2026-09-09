@@ -5,10 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "predev": "prisma generate && prisma db push",
-    "build": "node scripts/select-schema.mjs && prisma generate && prisma db push && next build",
+    "build": "prisma generate && prisma db push && next build",
     "start": "next start",
     "lint": "eslint",
-    "seed": "node --env-file=.env scripts/verify.mjs",
     "db:studio": "prisma studio"
   },
   "dependencies": {

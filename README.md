@@ -1,37 +1,44 @@
-A multi-tenant sales dashboard built with Next.js, Prisma, and SQLite.
+A multi-tenant Walmart-style seller dashboard built with Next.js, Prisma, and SQLite.
 
-## Getting Started
+Every account gets its own products and orders — all data is scoped per user.
 
-No external database or account setup needed — the app ships with a self-contained
-SQLite database that lives in `prisma/dev.db`.
+## Getting started
+
+No database or account setup needed. The app ships with a self-contained SQLite
+database that lives in `prisma/dev.db`.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Running `npm run dev` automatically creates/updates `prisma/dev.db` (via `prisma db push`)
-before starting the server. Open [http://localhost:3000](http://localhost:3000) and sign up
-for a new account — each account's products and orders are scoped to that user.
+`npm run dev` creates/updates `prisma/dev.db` (via `prisma db push`) before
+starting the server. Open [http://localhost:3000](http://localhost:3000) and sign
+up for an account.
 
-Optionally, load a demo account with sample products and orders:
+To fill the dashboard with sample data, use the app itself once you're signed in:
 
-```bash
-npm run seed
-# email: demo@saleshub.app  password: demo1234
-```
+- **Products → Add product**, or
+- **Home → Generate orders** to create a batch of realistic orders, or
+- **Import** to upload a spreadsheet of orders (`.xlsx` / `.csv`).
+
+## Deploying to Vercel
+
+Import the repo into Vercel and deploy — no environment variables or database
+required. The build runs `prisma db push` to bake the schema into a SQLite file,
+and at runtime the app copies it to `/tmp` (the only writable path on Vercel).
+
+Because `/tmp` is per-instance and cleared when an instance recycles, **data on
+Vercel is not permanent** — it's meant for demos. For persistent storage, point
+`DATABASE_URL` at a real database and switch the Prisma `datasource` provider.
+
+Optionally set your own `SESSION_SECRET` (`openssl rand -base64 32`) in the Vercel
+project settings; otherwise it falls back to the dev value in `.env`.
 
 ## Scripts
 
-- `npm run dev` — start the dev server (auto-provisions the local SQLite DB first)
-- `npm run build` — production build (used by the Vercel deployment, which targets
-  Postgres/Neon instead of SQLite — see `prisma/schema.production.prisma`)
-- `npm run seed` — reset and seed a demo account with sample data
-- `npm run db:studio` — open Prisma Studio to browse the local database
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `npm run dev` — start the dev server (provisions the local SQLite DB first)
+- `npm run build` — production build
+- `npm run start` — serve the production build
+- `npm run lint` — run ESLint
+- `npm run db:studio` — browse the local database in Prisma Studio

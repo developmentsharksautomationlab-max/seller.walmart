@@ -1,8 +1,16 @@
 // Prisma schema for the multi-tenant sales dashboard.
 // Each User owns their own Products and Orders — all queries are scoped by userId.
+//
+// The whole app runs on a single self-contained SQLite file — no external
+// database, locally or on Vercel. A fresh `git clone` + `npm run dev` creates
+// prisma/dev.db automatically; on Vercel the app runs against a copy in /tmp
+// (see src/lib/prisma.ts).
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // "native" covers local dev; "rhel-openssl-3.0.x" is the Vercel/AWS Lambda
+  // runtime, so the deployed function ships with a query engine that loads there.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
