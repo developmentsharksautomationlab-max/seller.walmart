@@ -1,5 +1,7 @@
 import type { NextConfig } from "next";
 
+const DASHBOARD_URL = "https://sellar-walmart.vercel.app/login";
+
 const nextConfig: NextConfig = {
   // Pin the workspace root to this project. A stray package-lock.json in a
   // parent directory otherwise causes Next.js to infer the wrong root.
@@ -7,11 +9,16 @@ const nextConfig: NextConfig = {
     root: __dirname,
   },
 
-  // `prisma db push` (in the build script) writes the schema into prisma/dev.db.
-  // Bundle that file into every server function so the app can copy it to /tmp
-  // at runtime — on Vercel /tmp is the only writable path. See src/lib/prisma.ts.
-  outputFileTracingIncludes: {
-    "/**": ["./prisma/dev.db"],
+  // Opening the app (locally or on Vercel) redirects straight to the dashboard
+  // login. Checked before the filesystem, so nothing here needs to render.
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: DASHBOARD_URL,
+        permanent: false,
+      },
+    ];
   },
 };
 
